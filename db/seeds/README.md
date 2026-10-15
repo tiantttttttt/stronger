@@ -3,8 +3,8 @@
 ## 文件定位
 
 - `phase1_catalog.plan.json`：首批 20 个动作及其肌肉关系的结构化评审清单。
-- `server/scripts/render-phase1-catalog-seed.mjs`：根据评审清单生成带固定 UUID、可重复执行的 PostgreSQL seed。
-- `server/scripts/validate-phase1-catalog.mjs`：不依赖第三方包的结构校验命令。
+- `scripts/render-phase1-catalog-seed.mjs`：根据评审清单生成带固定 UUID、可重复执行的 PostgreSQL seed。
+- `scripts/validate-phase1-catalog.mjs`：不依赖第三方包的结构校验命令。
 
 当前 JSON 是 seed 的内容规划源，不直接写入数据库。生成器会补充一期草案元数据，所有动作保持 `draft + inactive`；完成动作说明、来源和专业复核后，才允许改为 `reviewed + active`。
 
@@ -21,7 +21,7 @@
 ## 校验
 
 ```bash
-node server/scripts/validate-phase1-catalog.mjs
+node scripts/validate-phase1-catalog.mjs
 ```
 
 校验通过只代表结构和引用完整，不代表动作说明已经完成专业审核。
@@ -29,7 +29,7 @@ node server/scripts/validate-phase1-catalog.mjs
 生成或导入 seed：
 
 ```bash
-node server/scripts/render-phase1-catalog-seed.mjs > /tmp/phase1_catalog.sql
+node scripts/render-phase1-catalog-seed.mjs > /tmp/phase1_catalog.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /tmp/phase1_catalog.sql
 ```
 

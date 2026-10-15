@@ -1,0 +1,255 @@
+basePath: /
+definitions:
+  requests.DevLogin:
+    properties:
+      user_id:
+        example: 00000000-0000-0000-0000-000000000001
+        type: string
+    type: object
+  responses.Error:
+    properties:
+      code:
+        example: unauthorized
+        type: string
+      message:
+        example: valid Bearer access token required
+        type: string
+      parameter:
+        example: id
+        type: string
+    type: object
+  responses.Health:
+    properties:
+      code:
+        example: database_unavailable
+        type: string
+      database:
+        example: ok
+        type: string
+      status:
+        example: ok
+        type: string
+    type: object
+  responses.Identity:
+    properties:
+      user_id:
+        type: string
+    type: object
+  responses.Login:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      token_type:
+        type: string
+    type: object
+  responses.WorkoutSummary:
+    properties:
+      completed_at:
+        type: string
+      completed_exercise_count:
+        type: integer
+      completed_set_count:
+        type: integer
+      duration_seconds:
+        type: integer
+      id:
+        type: string
+      started_at:
+        type: string
+      status:
+        type: integer
+      total_reps:
+        type: integer
+      total_volume_kg:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: 居家力量训练记录 API。
+  title: Stronger API
+  version: "1.0"
+paths:
+  /api/v1/auth/dev/login:
+    post:
+      consumes:
+      - application/json
+      description: 仅 DEBUG=true 时可用；省略 user_id 使用默认测试用户。
+      parameters:
+      - description: 开发用户
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/requests.DevLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.Login'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      summary: 开发测试登录
+      tags:
+      - auth
+  /api/v1/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.Identity'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.Error'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户身份
+      tags:
+      - auth
+  /api/v1/workouts:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.WorkoutSummary'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      security:
+      - BearerAuth: []
+      summary: 开始空训练
+      tags:
+      - workouts
+  /api/v1/workouts/{id}/complete:
+    post:
+      parameters:
+      - description: 训练 UUID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.WorkoutSummary'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      security:
+      - BearerAuth: []
+      summary: 完成训练
+      tags:
+      - workouts
+  /api/v1/workouts/{id}/summary:
+    get:
+      parameters:
+      - description: 训练 UUID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.WorkoutSummary'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/responses.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/responses.Error'
+      security:
+      - BearerAuth: []
+      summary: 查询已完成训练总结
+      tags:
+      - workouts
+  /health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/responses.Health'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/responses.Health'
+      summary: 健康检查
+      tags:
+      - health
+securityDefinitions:
+  BearerAuth:
+    description: 填写 Bearer <access_token>。
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

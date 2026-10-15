@@ -4,7 +4,7 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o /out/stronger-api ./cmd/api
+RUN CGO_ENABLED=0 go build -o /out/stronger-api .
 
 FROM alpine:3.22
 RUN addgroup -S stronger && adduser -S stronger -G stronger
