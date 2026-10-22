@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -9,29 +8,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"stronger/server/service/api/logic"
 	"stronger/server/service/api/logic/requests"
 	"stronger/server/service/api/logic/responses"
 	"stronger/server/service/api/middleware"
 )
 
-type DevUserEnsurer interface {
-	EnsureDevUser(context.Context, string) error
-}
-
-// Auth handles development authentication and identity requests.
+// Auth 处理开发登录与身份查询。
 type Auth struct {
-	Debug    bool
-	Tokens   *middleware.TokenManager
-	DevUsers DevUserEnsurer
+	Debug  bool
+	Tokens *middleware.TokenManager
 }
 
-// DevLogin 开发测试登录。
-// @Summary 开发测试登录
-// @Description 仅 DEBUG=true 时可用；省略 user_id 使用默认测试用户。
+// @Summary 开发测试登录（仅 DEBUG=true）
 // @Tags auth
-// @Accept json
-// @Produce json
-// @Param body body requests.DevLogin false "开发用户"
+// @Param body body requests.DevLogin false "开发用户，省略 user_id 使用默认测试用户"
 // @Success 200 {object} responses.Login
 // @Failure 400,404,500 {object} responses.Error
 // @Router /api/v1/auth/dev/login [post]
@@ -53,11 +44,9 @@ func (h Auth) DevLogin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": "invalid_user_id", "message": "user_id must be a UUID"})
 		return
 	}
-	if h.DevUsers != nil {
-		if err := h.DevUsers.EnsureDevUser(c.Request.Context(), request.UserID); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"code": "dev_user_setup_failed", "message": "could not prepare development user"})
-			return
-		}
+	if err := logic.AuthLogic.EnsureDevUser(c.Request.Context(), request.UserID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"code": "dev_user_setup_failed", "message": "could not prepare development user"})
+		return
 	}
 
 	accessToken, err := h.Tokens.Issue(request.UserID)
@@ -68,10 +57,8 @@ func (h Auth) DevLogin(c *gin.Context) {
 	c.JSON(http.StatusOK, responses.Login{AccessToken: accessToken, TokenType: "Bearer", ExpiresIn: h.Tokens.ExpiresIn()})
 }
 
-// Me 获取当前用户身份。
 // @Summary 获取当前用户身份
 // @Tags auth
-// @Produce json
 // @Security BearerAuth
 // @Success 200 {object} responses.Identity
 // @Failure 401 {object} responses.Error

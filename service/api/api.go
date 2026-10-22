@@ -8,13 +8,14 @@ import (
 	"net/http"
 	"time"
 
-	"stronger/server/service/api/logic"
+	"stronger/server/consts"
+	"stronger/server/pkg/db"
 	"stronger/server/service/api/middleware"
 	"stronger/server/service/api/router"
 	"stronger/server/service/config"
 )
 
-// Service owns HTTP and database resources for the API.
+// Service 负责 HTTP 服务与数据库连接池的生命周期。
 type Service struct {
 	server *http.Server
 	pool   *sql.DB
@@ -22,28 +23,26 @@ type Service struct {
 }
 
 func New(cfg config.Config) (*Service, error) {
-	db, err := NewDB(context.Background(), cfg.DatabaseURL)
+	database, err := db.NewDB(context.Background(), cfg.DatabaseURL)
 	if err != nil {
 		return nil, err
 	}
-	pool, err := db.DB()
+	pool, err := database.DB()
 	if err != nil {
 		return nil, err
 	}
+	consts.DB = database
 	tokens := middleware.NewTokenManager(cfg.JWTSecret, time.Hour)
 	return &Service{
 		pool: pool, debug: cfg.Debug,
 		server: &http.Server{
 			Addr: cfg.HTTPAddr, ReadHeaderTimeout: 5 * time.Second,
-			Handler: router.NewRouter(router.Dependencies{
-				Database: databasePinger{pool: pool}, Debug: cfg.Debug,
-				Tokens: tokens, DevUsers: logic.NewAuth(db), Workouts: logic.NewWorkouts(db),
-			}),
+			Handler: router.NewRouter(cfg.Debug, tokens),
 		},
 	}, nil
 }
 
-// Run serves requests until cancellation or a listener error, then releases resources.
+// Run 在取消或监听失败后停止服务并释放资源。
 func (s *Service) Run(ctx context.Context) error {
 	serverError := make(chan error, 1)
 	go func() {
@@ -72,7 +71,7 @@ func (s *Service) Run(ctx context.Context) error {
 	return errors.Join(runErr, closeErr)
 }
 
-// Close drains HTTP requests before closing the database pool.
+// Close 先关闭 HTTP 服务，再释放数据库连接池。
 func (s *Service) Close(ctx context.Context) error {
 	shutdownErr := s.server.Shutdown(ctx)
 	if shutdownErr != nil {

@@ -14,6 +14,8 @@ import (
 // @version 1.0
 // @description 居家力量训练记录 API。
 // @BasePath /
+// @accept json
+// @produce json
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization

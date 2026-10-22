@@ -8,17 +8,18 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"stronger/server/consts"
 	"stronger/server/service/api/logic/responses"
 	"stronger/server/service/model"
 )
 
-type Workouts struct{ db *gorm.DB }
+type Workouts struct{}
 
-func NewWorkouts(db *gorm.DB) *Workouts { return &Workouts{db: db} }
+var WorkoutsLogic = &Workouts{}
 
 func (w *Workouts) Start(ctx context.Context, userID string) (responses.WorkoutSummary, error) {
 	var result model.WorkoutSession
-	err := w.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := consts.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var user model.User
 		if err := tx.Select("id", "height_cm", "weight_kg", "training_level", "fitness_goal").
 			Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", userID).Take(&user).Error; err != nil {
@@ -40,7 +41,7 @@ func (w *Workouts) Start(ctx context.Context, userID string) (responses.WorkoutS
 			return err
 		}
 		result = model.WorkoutSession{ID: id.String(), UserID: userID}
-		// Let PostgreSQL populate timestamps and status, and read back its defaults.
+		// 由 PostgreSQL 填充时间和状态，并回读默认值。
 		return tx.Select("id", "user_id").Clauses(clause.Returning{}).Create(&result).Error
 	})
 	return workoutSummary(result), err
@@ -48,7 +49,7 @@ func (w *Workouts) Start(ctx context.Context, userID string) (responses.WorkoutS
 
 func (w *Workouts) Complete(ctx context.Context, userID, workoutID string) (responses.WorkoutSummary, error) {
 	var result model.WorkoutSession
-	err := w.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err := consts.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("id = ? AND user_id = ?", workoutID, userID).Take(&result).Error
 		if err != nil {
@@ -60,7 +61,7 @@ func (w *Workouts) Complete(ctx context.Context, userID, workoutID string) (resp
 		if result.Status != model.WorkoutActive {
 			return model.ErrTerminalState
 		}
-		// The current API only supports empty workouts. Real set aggregation is a later feature.
+		// 当前仅支持空训练，实际组次汇总随组次功能实现。
 		return tx.Model(&result).Clauses(clause.Returning{}).
 			Where("id = ? AND user_id = ? AND status = ?", workoutID, userID, model.WorkoutActive).
 			Updates(map[string]interface{}{
@@ -76,7 +77,7 @@ func (w *Workouts) Complete(ctx context.Context, userID, workoutID string) (resp
 
 func (w *Workouts) GetSummary(ctx context.Context, userID, workoutID string) (responses.WorkoutSummary, error) {
 	var result model.WorkoutSession
-	err := w.db.WithContext(ctx).
+	err := consts.DB.WithContext(ctx).
 		Where("id = ? AND user_id = ? AND status = ?", workoutID, userID, model.WorkoutCompleted).
 		Take(&result).Error
 	return workoutSummary(result), workoutError(err)

@@ -7,37 +7,25 @@ import (
 	"stronger/server/service/api/middleware"
 )
 
-// Dependencies contains the router's infrastructure and runtime policy.
-type Dependencies struct {
-	Database handler.DatabasePinger
-	Debug    bool
-	Tokens   *middleware.TokenManager
-	DevUsers handler.DevUserEnsurer
-	Workouts handler.WorkoutLogic
-}
-
-// NewRouter builds the API router.
-func NewRouter(dependencies Dependencies) *gin.Engine {
-	if dependencies.Debug {
+// NewRouter 注册路由及鉴权，数据库由服务启动流程初始化。
+func NewRouter(debug bool, tokens *middleware.TokenManager) *gin.Engine {
+	if debug {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	router := gin.New()
 	router.Use(gin.Recovery())
-	router.GET("/health", handler.Health(dependencies.Database))
+	router.GET("/health", handler.Health)
 	api := router.Group("/api/v1")
-	auth := handler.Auth{Debug: dependencies.Debug, Tokens: dependencies.Tokens, DevUsers: dependencies.DevUsers}
-	if dependencies.Debug {
+	auth := handler.Auth{Debug: debug, Tokens: tokens}
+	if debug {
 		api.POST("/auth/dev/login", auth.DevLogin)
 	}
-	api.GET("/me", dependencies.Tokens.Middleware(), auth.Me)
-	if dependencies.Workouts != nil {
-		workouts := handler.Workouts{Logic: dependencies.Workouts}
-		routes := api.Group("/workouts", dependencies.Tokens.Middleware())
-		routes.POST("", workouts.Start)
-		routes.POST("/:id/complete", workouts.Complete)
-		routes.GET("/:id/summary", workouts.GetSummary)
-	}
+	api.GET("/me", tokens.Middleware(), auth.Me)
+	routes := api.Group("/workouts", tokens.Middleware())
+	routes.POST("", handler.WorkoutsHandler.Start)
+	routes.POST("/:id/complete", handler.WorkoutsHandler.Complete)
+	routes.GET("/:id/summary", handler.WorkoutsHandler.GetSummary)
 	return router
 }

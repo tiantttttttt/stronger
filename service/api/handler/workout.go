@@ -1,75 +1,65 @@
 package handler
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
+	"stronger/server/service/api/logic"
 	"stronger/server/service/api/logic/responses"
 	"stronger/server/service/api/middleware"
 	"stronger/server/service/model"
 )
 
-type WorkoutLogic interface {
-	Start(context.Context, string) (responses.WorkoutSummary, error)
-	Complete(context.Context, string, string) (responses.WorkoutSummary, error)
-	GetSummary(context.Context, string, string) (responses.WorkoutSummary, error)
-}
+// Workouts 处理 HTTP 参数与响应，业务与事务由 Logic 负责。
+type Workouts struct{}
 
-// Workouts handles HTTP input/output; Logic owns transactions and database access.
-type Workouts struct{ Logic WorkoutLogic }
+var WorkoutsHandler = &Workouts{}
 
-// Start 开始空训练。
 // @Summary 开始空训练
 // @Tags workouts
-// @Produce json
 // @Security BearerAuth
 // @Success 200 {object} responses.WorkoutSummary
-// @Failure 401,404,409,500 {object} responses.Error
 // @Router /api/v1/workouts [post]
+// @Failure 401,404,409,500 {object} responses.Error
 func (h Workouts) Start(c *gin.Context) {
 	userID, _ := middleware.CurrentUserID(c)
-	summary, err := h.Logic.Start(c.Request.Context(), userID)
+	summary, err := logic.WorkoutsLogic.Start(c.Request.Context(), userID)
 	writeResult(c, summary, err, http.StatusOK)
 }
 
-// Complete 完成训练。
 // @Summary 完成训练
 // @Tags workouts
-// @Produce json
 // @Security BearerAuth
 // @Param id path string true "训练 UUID" format(uuid)
 // @Success 200 {object} responses.WorkoutSummary
-// @Failure 400,401,404,409,500 {object} responses.Error
 // @Router /api/v1/workouts/{id}/complete [post]
+// @Failure 400,401,404,409,500 {object} responses.Error
 func (h Workouts) Complete(c *gin.Context) {
 	workoutID, ok := UUIDPathParam(c, "id")
 	if !ok {
 		return
 	}
 	userID, _ := middleware.CurrentUserID(c)
-	summary, err := h.Logic.Complete(c.Request.Context(), userID, workoutID.String())
+	summary, err := logic.WorkoutsLogic.Complete(c.Request.Context(), userID, workoutID.String())
 	writeResult(c, summary, err, http.StatusOK)
 }
 
-// GetSummary 查询已完成训练总结。
 // @Summary 查询已完成训练总结
 // @Tags workouts
-// @Produce json
 // @Security BearerAuth
 // @Param id path string true "训练 UUID" format(uuid)
 // @Success 200 {object} responses.WorkoutSummary
-// @Failure 400,401,404,500 {object} responses.Error
 // @Router /api/v1/workouts/{id}/summary [get]
+// @Failure 400,401,404,500 {object} responses.Error
 func (h Workouts) GetSummary(c *gin.Context) {
 	workoutID, ok := UUIDPathParam(c, "id")
 	if !ok {
 		return
 	}
 	userID, _ := middleware.CurrentUserID(c)
-	summary, err := h.Logic.GetSummary(c.Request.Context(), userID, workoutID.String())
+	summary, err := logic.WorkoutsLogic.GetSummary(c.Request.Context(), userID, workoutID.String())
 	writeResult(c, summary, err, http.StatusOK)
 }
 

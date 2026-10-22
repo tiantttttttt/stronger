@@ -10,10 +10,11 @@
 
 ```text
 main.go        API 入口
+consts/        全局数据库连接
+pkg/db/        GORM 数据库连接初始化
 service/
   api/
-    api.go       依赖组装、启动与关闭
-    db.go        GORM 数据库连接初始化
+    api.go       资源初始化、启动与关闭
     router/      路由注册
     handler/     HTTP 参数与响应
     middleware/  JWT 签发及验证
@@ -106,16 +107,20 @@ API 默认监听 `http://127.0.0.1:8080`。客户端可通过 HTTP 接口独立�
 
 ## 数据访问与集成测试
 
-业务代码统一通过 GORM 访问 PostgreSQL，事务和行锁在 `service/api/logic` 中管理。表结构仍由 SQL migration 管理，服务不执行 AutoMigrate。GORM PostgreSQL 驱动内部依赖 pgx，但业务代码不再直接使用 pgx/pgxpool。
+业务代码统一通过 `consts.DB.WithContext(ctx)` 访问 PostgreSQL。`pkg/db.NewDB` 创建连接池，`service/api.New` 在注册路由前初始化全局数据库；单个进程只运行一个服务实例，运行期间不替换连接。关闭时先停止 HTTP 服务，再关闭连接池。
 
-默认 `go test ./...` 跳过真实数据库测试；指定一个允许创建 schema 的测试数据库运行：
+Handler 直接调用 `AuthLogic`、`WorkoutsLogic` 等具体业务单例，不定义业务接口或传递数据库。Logic 使用无状态结构体组织方法，事务和行锁在 `service/api/logic` 中管理；事务内部始终使用局部 `tx`，查询条件、请求上下文和事务不写回全局连接。Auth Handler 保留 Debug 和 TokenManager，Router 通过 `NewRouter(debug, tokens)` 注册路由。
+
+表结构仍由 SQL migration 管理，服务不执行 AutoMigrate。GORM PostgreSQL 驱动内部依赖 pgx，但业务代码不再直接使用 pgx/pgxpool。
+
+现有测试不连接真实数据库，健康检查通过 SQL mock 覆盖连接成功、失败及两秒超时。运行检查：
 
 ```bash
-TEST_DATABASE_URL='postgres://stronger:stronger@127.0.0.1:5432/stronger?sslmode=disable' \
-  go test -race ./...
+make check
+go test -race ./...
 ```
 
-`TEST_DATABASE_URL` 必须是 PostgreSQL URL。每次测试创建独立随机 schema，应用真实 migration，结束时只清理该 schema。测试覆盖真实 HTTP 空训练闭环、并发开始、重复完成、用户隔离、档案拦截、终态保护与取消上下文。
+真实数据库验证使用临时脚本和专用 PostgreSQL 测试库，创建独立随机 schema 并应用真实 migration；验证登录、训练闭环、并发、幂等和用户隔离后，只清理测试 schema 并删除临时脚本。临时验证不包含在上述命令中。修改全局数据库的测试串行运行，并在所有请求结束后恢复连接变量。
 
 ## 接口文档
 

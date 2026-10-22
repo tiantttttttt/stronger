@@ -1,8 +1,7 @@
-package api
+package db
 
 import (
 	"context"
-	"database/sql"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -10,8 +9,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// NewDB opens GORM and its underlying connection pool. /health checks connectivity.
-// Schema changes are applied through SQL migrations, never AutoMigrate.
+// NewDB 创建连接池，连通性由 /health 检查；表结构通过 SQL migration 管理。
 func NewDB(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
 		DisableAutomaticPing: true,
@@ -29,7 +27,3 @@ func NewDB(ctx context.Context, databaseURL string) (*gorm.DB, error) {
 	pool.SetConnMaxLifetime(time.Hour)
 	return db.WithContext(ctx), nil
 }
-
-type databasePinger struct{ pool *sql.DB }
-
-func (p databasePinger) Ping(ctx context.Context) error { return p.pool.PingContext(ctx) }
