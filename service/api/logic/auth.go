@@ -14,8 +14,8 @@ type Auth struct{}
 
 var AuthLogic = &Auth{}
 
-// EnsureDevUser 为开发登录准备可重复使用的测试用户。
-func (a *Auth) EnsureDevUser(ctx context.Context, userID string) error {
+// UpsertDevUser 创建开发用户；冲突时只更新登录时间，不覆盖档案。
+func (a *Auth) UpsertDevUser(ctx context.Context, userID string) error {
 	height, weight := "170", "65"
 	level, goal := int16(1), int16(3)
 	user := model.User{

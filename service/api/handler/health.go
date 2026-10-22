@@ -13,7 +13,6 @@ import (
 // @Summary 健康检查
 // @Tags health
 // @Success 200 {object} responses.Health
-// @Failure 503 {object} responses.Health
 // @Router /health [get]
 func Health(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)

@@ -2,7 +2,7 @@
 
 居家力量训练记录服务，使用 Go 1.25、Gin、GORM、PostgreSQL 和 JWT。本仓库可独立运行，不依赖前端仓库或外层工作区。
 
-当前实现：开发登录、身份查询、开始空训练、完成训练和读取总结。微信登录、动作与组次记录、历史趋势尚未完成。
+当前实现：开发登录、身份查询、创建空训练、更新为已完成状态和读取冻结统计。训练入口统一使用 Create / Update / Stat，见 [接口设计与实现规范](docs/api-conventions.md)。微信登录、动作与组次记录、历史趋势尚未完成。
 
 模式由 `DEBUG` 控制：`DEBUG=true` 为调试模式，启用 Gin debug 模式和开发登录；`DEBUG=false` 为生产模式，启用 Gin release 模式且不注册开发登录接口。未设置时默认 `false`，其他值会导致启动失败。`.env.example` 使用 `DEBUG=true` 方便本地联调；Compose 同样读取该变量。不再使用 `APP_ENV`，已有 `.env` 请替换为 `DEBUG=true` 或 `DEBUG=false`。
 
@@ -105,7 +105,7 @@ Seed 可重复执行，包含 20 个动作、39 个肌肉及关联关系；动�
 
 API 默认监听 `http://127.0.0.1:8080`。客户端可通过 HTTP 接口独立联调，不需要服务端持有前端源码。
 
-## 数据访问与集成测试
+## 数据访问与测试
 
 业务代码统一通过 `consts.DB.WithContext(ctx)` 访问 PostgreSQL。`pkg/db.NewDB` 创建连接池，`service/api.New` 在注册路由前初始化全局数据库；单个进程只运行一个服务实例，运行期间不替换连接。关闭时先停止 HTTP 服务，再关闭连接池。
 
@@ -113,18 +113,18 @@ Handler 直接调用 `AuthLogic`、`WorkoutsLogic` 等具体业务单例，不�
 
 表结构仍由 SQL migration 管理，服务不执行 AutoMigrate。GORM PostgreSQL 驱动内部依赖 pgx，但业务代码不再直接使用 pgx/pgxpool。
 
-现有测试不连接真实数据库，健康检查通过 SQL mock 覆盖连接成功、失败及两秒超时。运行检查：
+当前后端测试覆盖 UUID 路径参数、健康检查 SQL mock 和配置解析：
 
 ```bash
 make check
 go test -race ./...
 ```
 
-真实数据库验证使用临时脚本和专用 PostgreSQL 测试库，创建独立随机 schema 并应用真实 migration；验证登录、训练闭环、并发、幂等和用户隔离后，只清理测试 schema 并删除临时脚本。临时验证不包含在上述命令中。修改全局数据库的测试串行运行，并在所有请求结束后恢复连接变量。
+当前仓库未保留训练接口契约测试和真实数据库集成测试，以上命令不验证训练的并发、幂等、归属隔离和冻结统计；设置 TEST_DATABASE_URL 也不会增加这些覆盖。修改全局数据库的测试串行运行，并在所有请求结束后恢复连接变量。
 
 ## 接口文档
 
-Handler 的 swag 注释为文档来源，接口变更后重新生成 `docs/swagger.json` 和 `docs/swagger.yaml`：
+Handler 的 swag 注释为文档来源，采用 [swag 精简规范](docs/api-conventions.md#swag-注释规范)，仅保留用途、分组、鉴权、参数、成功响应和路由声明。接口变更后重新生成 `docs/swagger.json` 和 `docs/swagger.yaml`：
 
 ```bash
 go install github.com/swaggo/swag/cmd/swag@v1.16.4

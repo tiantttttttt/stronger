@@ -24,8 +24,8 @@ func NewRouter(debug bool, tokens *middleware.TokenManager) *gin.Engine {
 	}
 	api.GET("/me", tokens.Middleware(), auth.Me)
 	routes := api.Group("/workouts", tokens.Middleware())
-	routes.POST("", handler.WorkoutsHandler.Start)
-	routes.POST("/:id/complete", handler.WorkoutsHandler.Complete)
-	routes.GET("/:id/summary", handler.WorkoutsHandler.GetSummary)
+	routes.POST("", handler.WorkoutsHandler.Create)
+	routes.PUT("/:id", handler.WorkoutsHandler.Update)
+	routes.GET("/:id/stat", handler.WorkoutsHandler.Stat)
 	return router
 }

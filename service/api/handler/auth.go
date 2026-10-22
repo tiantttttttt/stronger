@@ -22,9 +22,8 @@ type Auth struct {
 
 // @Summary 开发测试登录（仅 DEBUG=true）
 // @Tags auth
-// @Param body body requests.DevLogin false "开发用户，省略 user_id 使用默认测试用户"
+// @Param body body requests.DevLogin false "开发登录请求"
 // @Success 200 {object} responses.Login
-// @Failure 400,404,500 {object} responses.Error
 // @Router /api/v1/auth/dev/login [post]
 func (h Auth) DevLogin(c *gin.Context) {
 	if !h.Debug {
@@ -44,7 +43,7 @@ func (h Auth) DevLogin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"code": "invalid_user_id", "message": "user_id must be a UUID"})
 		return
 	}
-	if err := logic.AuthLogic.EnsureDevUser(c.Request.Context(), request.UserID); err != nil {
+	if err := logic.AuthLogic.UpsertDevUser(c.Request.Context(), request.UserID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"code": "dev_user_setup_failed", "message": "could not prepare development user"})
 		return
 	}
@@ -61,7 +60,6 @@ func (h Auth) DevLogin(c *gin.Context) {
 // @Tags auth
 // @Security BearerAuth
 // @Success 200 {object} responses.Identity
-// @Failure 401 {object} responses.Error
 // @Router /api/v1/me [get]
 func (h Auth) Me(c *gin.Context) {
 	userID, _ := middleware.CurrentUserID(c)

@@ -22,7 +22,7 @@
                 "summary": "开发测试登录（仅 DEBUG=true）",
                 "parameters": [
                     {
-                        "description": "开发用户，省略 user_id 使用默认测试用户",
+                        "description": "开发登录请求",
                         "name": "body",
                         "in": "body",
                         "schema": {
@@ -35,24 +35,6 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/responses.Login"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
                         }
                     }
                 }
@@ -75,12 +57,6 @@
                         "schema": {
                             "$ref": "#/definitions/responses.Identity"
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
                     }
                 }
             }
@@ -95,43 +71,29 @@
                 "tags": [
                     "workouts"
                 ],
-                "summary": "开始空训练",
+                "summary": "创建空训练",
+                "parameters": [
+                    {
+                        "description": "创建请求",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/requests.CreateWorkout"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/responses.WorkoutSummary"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
+                            "$ref": "#/definitions/responses.WorkoutRecord"
                         }
                     }
                 }
             }
         },
-        "/api/v1/workouts/{id}/complete": {
-            "post": {
+        "/api/v1/workouts/{id}": {
+            "put": {
                 "security": [
                     {
                         "BearerAuth": []
@@ -140,7 +102,7 @@
                 "tags": [
                     "workouts"
                 ],
-                "summary": "完成训练",
+                "summary": "更新训练状态",
                 "parameters": [
                     {
                         "type": "string",
@@ -149,49 +111,28 @@
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "更新请求",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.UpdateWorkout"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/responses.WorkoutSummary"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "409": {
-                        "description": "Conflict",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
+                            "$ref": "#/definitions/responses.WorkoutRecord"
                         }
                     }
                 }
             }
         },
-        "/api/v1/workouts/{id}/summary": {
+        "/api/v1/workouts/{id}/stat": {
             "get": {
                 "security": [
                     {
@@ -201,7 +142,7 @@
                 "tags": [
                     "workouts"
                 ],
-                "summary": "查询已完成训练总结",
+                "summary": "查询已完成训练统计",
                 "parameters": [
                     {
                         "type": "string",
@@ -216,31 +157,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/responses.WorkoutSummary"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Error"
+                            "$ref": "#/definitions/responses.WorkoutStat"
                         }
                     }
                 }
@@ -258,18 +175,15 @@
                         "schema": {
                             "$ref": "#/definitions/responses.Health"
                         }
-                    },
-                    "503": {
-                        "description": "Service Unavailable",
-                        "schema": {
-                            "$ref": "#/definitions/responses.Health"
-                        }
                     }
                 }
             }
         }
     },
     "definitions": {
+        "requests.CreateWorkout": {
+            "type": "object"
+        },
         "requests.DevLogin": {
             "type": "object",
             "properties": {
@@ -279,20 +193,18 @@
                 }
             }
         },
-        "responses.Error": {
+        "requests.UpdateWorkout": {
             "type": "object",
+            "required": [
+                "status"
+            ],
             "properties": {
-                "code": {
-                    "type": "string",
-                    "example": "unauthorized"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "valid Bearer access token required"
-                },
-                "parameter": {
-                    "type": "string",
-                    "example": "id"
+                "status": {
+                    "description": "当前仅支持更新为已完成。",
+                    "type": "integer",
+                    "enum": [
+                        2
+                    ]
                 }
             }
         },
@@ -335,7 +247,24 @@
                 }
             }
         },
-        "responses.WorkoutSummary": {
+        "responses.WorkoutRecord": {
+            "type": "object",
+            "properties": {
+                "completed_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "started_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "responses.WorkoutStat": {
             "type": "object",
             "properties": {
                 "completed_at": {
